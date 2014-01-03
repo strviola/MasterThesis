@@ -1,0 +1,136 @@
+\documentclass[a4paper,11pt]{jsarticle}
+\title{Webアプリケーションにおける不正行為の統計的検出}
+\author{12M38278 鈴木竜太}
+\date{\today}
+%\usepackage[dvipdfm]{graphicx}
+%↑画像を貼るとき
+\begin{document}
+%\maketitle
+%%%%%%%%いつもここから%%%%%%%%
+
+\section{はじめに}
+\subsection{背景}
+\paragraph{不正行為の検出}
+ネットワークを用いたアプリケーションは広くアクセス可能であるという利点がある反面，しばしば脆弱性を悪用した攻撃の対象になりうる．
+Webアプリケーションの利用の一つとしてオンラインゲームが存在するが，これも攻撃の対象として例外ではない．
+オンラインゲームにおける不正行為は特にチートと呼ばれ，チート検出に関して数多くの既存研究が存在する．
+過去のチート検出に関する研究は，以下の条件を前提としていた．
+
+\begin{enumerate}
+\item
+\label{all_server}プレイヤーの全ての入力がサーバーに送信される．
+\item
+チート検出機構は，サーバーへの全ての入力を検出材料として利用できる．
+\end{enumerate}
+
+この論文では，前提\ref{all_server}を「常時接続」，常時接続なゲームのもとで行われるチートを，\cite{gamefps}に倣って「仮想ドーピング」と呼ぶ．
+
+\paragraph{一時接続ゲーム}
+近年，ゲーム上の入力の全てではなく，その中の一部だけ，もしくはそれを加工したデータをサーバーに送信する設計のオンラインゲームが普及しつつある．
+本論文ではこの特徴を「一時接続」と呼ぶ．
+一時接続ゲームは以下の理由から，特に携帯端末プラットフォームにおいて顕著である．
+
+\begin{itemize}
+\item
+消費電力を抑える．携帯端末はバッテリーが有限であり，さらにゲーム以外のアプリケーションにも影響するため．
+\item
+屋外での利用も想定すると，電波環境が安定しない．
+\end{itemize}
+
+一時接続ゲームにもチートは存在しうる．より一般的に，以下の条件を満たすサーバー・クライアント型アプリケーションにはチートが発生する．
+
+\begin{enumerate}
+\item
+サーバーにデータを送信し，他の人(アカウント)と共有する
+\item
+クライアントの設計上、送信データに「制約」が存在する
+\item
+制約外のデータ(「チート」と呼ぶ)を送信することで、他人の行動や意思決定に影響する
+\item
+チートを行うことで自分に有利になる
+\end{enumerate}
+
+ここで，この条件が妥当である理由を，具体例を交えて説明する．
+まず1は最大の前提である．
+そもそもインターネットに繋がっていないゲームであれば，たとえ改造者がクライアントを改造するなどしてプレイヤーに不正に有利な状態を作ったとしても何ら問題はない．
+それは改造者が勝手に遊んでいるだけで，他人に迷惑をかけていない(もちろん，二次創作物やそれに対する著作権などの問題が発生することが考えられるが，今回の研究の興味の対象ではない)．
+また2に関して，「制約」が存在する全てのアプリケーションでチートが問題になるとは限らない．
+例えばTwitterは「140文字以上の文字列を送信できない」という「制約」が存在するが，この制約を守らないチート的な送信があったところでそれは他人に何ら影響はない．
+
+問題は3の「他人に影響する」という特徴である．
+オンラインゲームは遠い所にいる他人との同時プレイを可能にするものであり，それが醍醐味のひとつでもある．
+一方でそれを可能にしている技術には欠陥が含まれることも多く，チートを許してしまうケースも存在する．
+例えば，ガンホー社の「パズル\&ドラゴンズ」(パズドラ)では，外部ツール\cite{ghostrouter}を利用してゲーム内のデータを任意の数値に書き換えるチートが可能である．
+このチートを行った時，プレイヤー本人が有利な状態を不正に作る\footnote{強力なキャラクターを使用できる，既存のキャラクターの能力を向上させる，などが可能である．}だけでなく，他人の意思決定に影響してゲーム内ポイントをより多く獲得することも期待できる．
+
+\subsection{問題点}
+\paragraph{仮想強盗}
+一時接続ゲームにおけるチートの多くは，様々なパラメータを偽り，悪意のあるプレイヤーに有利な状態を作ることを目的とする．
+この操作は，ゲーム内のプロセスを経ることなく，キャラクターやアイテムを使用可能にし，またキャラクターの性能を上げるなどの効果をもたらす．
+本論文ではこのチートに注目し，常時接続ゲームにおける「仮想ドーピング」と対比して「仮想強盗」と呼ぶ．
+既存の仮想ドーピングチート検出システムは，仮想強盗を検出できるかどうか自明ではない．これは以下の特徴の違いによる．
+
+\begin{center}
+\begin{tabular}{l|cc}
+& 仮想強盗 & 仮想ドーピング \\ \hline
+情報の性質 & データ & 行動 \\
+アクセス密度 & 低 & 高 \\
+攻撃一般化 & なし & あり \\
+\end{tabular}
+\end{center}
+
+ただし，
+
+\begin{itemize}
+\item
+アクセス密度: 1アクセス元の単位時間あたりのアクセス回数．
+\item
+攻撃一般化: 観測対象の攻撃が事前に知られているか
+\end{itemize}
+
+常時接続ゲームでは，サーバーへの入力がそのままゲーム内の行動を表す．このため，単位時間あたりの移動距離や操作回数など，比較的単純な指標でチートを検出できる\cite{botcraft}．それに対し一時接続ゲームでは，チート判定に利用できる情報の質・量共に限られるため，短時間的な入力のみで判定できるとは限らない．
+
+\subsection{目的}
+本研究では，一時接続ゲームにおける仮想強盗の検出を目的とする．
+
+\begin{thebibliography}{99}
+\bibitem{mining}
+Lee, Wenke, Salvatore J. Stolfo, and Kui W. Mok. "A data mining framework for building intrusion detection models." Security and Privacy, 1999. Proceedings of the 1999 IEEE Symposium on. IEEE, 1999.
+
+\bibitem{ripper}
+Cohen, William W. "Fast effective rule induction." ICML. Vol. 95. 1995.
+
+\bibitem{cluster}
+Portnoy, Leonid, Eleazar Eskin, and Sal Stolfo. "Intrusion detection with unlabeled data using clustering." In Proceedings of ACM CSS Workshop on Data Mining Applied to Security (DMSA-2001. 2001.
+
+\bibitem{httplearn}
+Kruegel, Christopher, Giovanni Vigna, and William Robertson. "A multi-model approach to the detection of web-based attacks." Computer Networks 48.5 (2005): 717-738.
+
+\bibitem{botcraft}
+Gianvecchio, Steven, et al. "Battle of Botcraft: fighting bots in online games with human observational proofs." Proceedings of the 16th ACM conference on Computer and communications security. ACM, 2009.
+
+\bibitem{gamep2p}
+Xiang-bin, Shi, et al. "A cheating detection mechanism based on fuzzy reputation management of P2P MMOGs." Software Engineering, Artificial Intelligence, Networking, and Parallel/Distributed Computing, 2007. SNPD 2007. Eighth ACIS International Conference on. Vol. 2. IEEE, 2007.
+
+\bibitem{gamefps}
+Laurens, Peter, et al. "A novel approach to the detection of cheating in multiplayer online games." Engineering Complex Computer Systems, 2007. 12th IEEE International Conference on. IEEE, 2007.
+
+\bibitem{ghostrouter}
+GHOSTROUTER. http://www.internal.co.jp/products/util/ghostrouter/about/
+
+\end{thebibliography}
+
+%\bibliographystyle{jplain}
+%\bibliography{cite}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
