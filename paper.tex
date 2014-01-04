@@ -8,9 +8,13 @@
 %\maketitle
 %%%%%%%%いつもここから%%%%%%%%
 
-\section{はじめに}
-\subsection{背景}
-\paragraph{不正行為の検出}
+\tableofcontents
+
+\newpage
+
+\part{はじめに}
+\section{背景}
+\subsection{不正行為の検出}
 ネットワークを用いたアプリケーションは広くアクセス可能であるという利点がある反面，しばしば脆弱性を悪用した攻撃の対象になりうる．
 Webアプリケーションの利用の一つとしてオンラインゲームが存在するが，これも攻撃の対象として例外ではない．
 オンラインゲームにおける不正行為は特にチートと呼ばれ，チート検出に関して数多くの既存研究が存在する．
@@ -25,7 +29,7 @@ Webアプリケーションの利用の一つとしてオンラインゲーム�
 
 この論文では，前提\ref{all_server}を「常時接続」，常時接続なゲームのもとで行われるチートを，\cite{gamefps}に倣って「仮想ドーピング」と呼ぶ．
 
-\paragraph{一時接続ゲーム}
+\subsection{一時接続ゲーム}
 近年，ゲーム上の入力の全てではなく，その中の一部だけ，もしくはそれを加工したデータをサーバーに送信する設計のオンラインゲームが普及しつつある．
 本論文ではこの特徴を「一時接続」と呼ぶ．
 一時接続ゲームは以下の理由から，特に携帯端末プラットフォームにおいて顕著である．
@@ -63,8 +67,8 @@ Webアプリケーションの利用の一つとしてオンラインゲーム�
 例えば，ガンホー社の「パズル\&ドラゴンズ」(パズドラ)では，外部ツール\cite{ghostrouter}を利用してゲーム内のデータを任意の数値に書き換えるチートが可能である．
 このチートを行った時，プレイヤー本人が有利な状態を不正に作る\footnote{強力なキャラクターを使用できる，既存のキャラクターの能力を向上させる，などが可能である．}だけでなく，他人の意思決定に影響してゲーム内ポイントをより多く獲得することも期待できる．
 
-\subsection{問題点}
-\paragraph{仮想強盗}
+\section{問題点}
+\subsection{仮想強盗}
 一時接続ゲームにおけるチートの多くは，様々なパラメータを偽り，悪意のあるプレイヤーに有利な状態を作ることを目的とする．
 この操作は，ゲーム内のプロセスを経ることなく，キャラクターやアイテムを使用可能にし，またキャラクターの性能を上げるなどの効果をもたらす．
 本論文ではこのチートに注目し，常時接続ゲームにおける「仮想ドーピング」と対比して「仮想強盗」と呼ぶ．
@@ -90,10 +94,86 @@ Webアプリケーションの利用の一つとしてオンラインゲーム�
 
 常時接続ゲームでは，サーバーへの入力がそのままゲーム内の行動を表す．このため，単位時間あたりの移動距離や操作回数など，比較的単純な指標でチートを検出できる\cite{botcraft}．それに対し一時接続ゲームでは，チート判定に利用できる情報の質・量共に限られるため，短時間的な入力のみで判定できるとは限らない．
 
-\subsection{目的}
+\section{目的}
 本研究では，一時接続ゲームにおける仮想強盗の検出を目的とする．
 
+\newpage % \partの直前固定
+\part{方法}
+この部では，今回の実験の対象としたゲーム「ちくわ栽培キット」と，「ちくわ」におけるチートおよびそれの検出方法について述べる．
+
+\section{ちくわ栽培キット}
+\subsection{概要}
+「ちくわ栽培キット」は，「ちくわ」をメインキャラクターとした育成シミュレーションゲームである．このゲームは「育成」「設備投資」「バトル」「図鑑」の要素からなる．
+
+\subsubsection{用語の解説}
+\paragraph{ちくわ}
+ゲーム中で取得可能なキャラクターである．このゲームは「ちくわ」を収集することを最大の目的とする．60種類\footnote{2014年1月現在．今後増える可能性がある．}存在し，それぞれ特徴が異なる．取得したちくわは一時的に「収穫箱」に保存される．
+
+\paragraph{収穫箱}
+取得したちくわを保存する機能．収穫箱に存在するちくわに対して，さらに操作が可能である．
+
+\paragraph{ちくわポイント(TP)}
+ゲーム内通貨．
+
+\paragraph{設備}
+
+
+\subsubsection{操作の説明}
+\paragraph{栽培}
+
+\paragraph{売却}
+
+\paragraph{設備投資}
+
+\paragraph{バトル}
+
+
+
+\subsection{実装}
+\subsubsection{クライアントサイド}
+%TODO
+
+\subsubsection{サーバーサイド}
+サーバーサイドの実装にはDjango\cite{django}を用いた．DjangoはPython\cite{python}で実装されたWebアプリケーションフレームワークである．Djangoを用いたWebアプリケーション開発では，以下の要素を定義する必要がある\footnote{クライアントがWebアプリケーションである場合，この他にテンプレートHTMLを定義する．今回の「ちくわ栽培キット」では利用していない．}．
+
+\begin{itemize}
+\item
+モデル．
+\item
+View関数．
+\item
+URLディスパッチャ．
+\end{itemize}
+
+\subsection{このゲームで考えられるチート}
+
+\section{提案手法}
+\subsection{ログの取得}
+\subsection{ログから座標への変換}
+\subsection{仮想強盗の検出}
+
+\newpage
+\part{実験}
+\section{実験環境}
+\section{結果}
+
+\newpage
+\part{議論}
+
+\newpage
+\part{おわりに}
+\section{まとめ}
+\section{貢献}
+\section{今後の課題}
+
+\newpage
+\part*{謝辞}
+
+
+
+\newpage
 \begin{thebibliography}{99}
+
 \bibitem{mining}
 Lee, Wenke, Salvatore J. Stolfo, and Kui W. Mok. "A data mining framework for building intrusion detection models." Security and Privacy, 1999. Proceedings of the 1999 IEEE Symposium on. IEEE, 1999.
 
@@ -117,6 +197,12 @@ Laurens, Peter, et al. "A novel approach to the detection of cheating in multipl
 
 \bibitem{ghostrouter}
 GHOSTROUTER. http://www.internal.co.jp/products/util/ghostrouter/about/
+
+\bibitem{django}
+Django project. https://www.djangoproject.com
+
+\bibitem{python}
+Python programming language. http://www.python.org
 
 \end{thebibliography}
 
