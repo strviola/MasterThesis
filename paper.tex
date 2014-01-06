@@ -2,8 +2,22 @@
 \title{Webアプリケーションにおける不正行為の統計的検出}
 \author{12M38278 鈴木竜太}
 \date{\today}
-%\usepackage[dvipdfm]{graphicx}
-%↑画像を貼るとき
+
+% packages
+\usepackage[dvipdfm]{graphicx}
+\usepackage{listings}
+\usepackage{ascmac}
+\usepackage{here}
+\usepackage{txfonts}
+
+% environment
+\newtheorem{pydef}{定義}
+
+% definition
+\newcommand{\savefunc}{{\tt save\_to\_outer}}
+\newcommand{\param}{\paragraph{パラメータ}}
+
+
 \begin{document}
 %\maketitle
 %%%%%%%%いつもここから%%%%%%%%
@@ -12,6 +26,7 @@
 
 \newpage
 
+%%%%%%%%%%%%%%% はじめに %%%%%%%%%%%%%%%
 \part{はじめに}
 \section{背景}
 \subsection{不正行為の検出}
@@ -98,6 +113,9 @@ Webアプリケーションの利用の一つとしてオンラインゲーム�
 本研究では，一時接続ゲームにおける仮想強盗の検出を目的とする．
 
 \newpage % \partの直前固定
+
+%%%%%%%%%%%%%%% 方法 %%%%%%%%%%%%%%%
+
 \part{方法}
 この部では，今回の実験の対象としたゲーム「ちくわ栽培キット」と，「ちくわ」におけるチートおよびそれの検出方法について述べる．
 
@@ -177,8 +195,64 @@ URLディスパッチャ．URLとビュー関数を対応づける．
 プレイヤーがバトルに負けた場合，敵軍の所持者に報酬としてTPが送信される．この報酬TPは敵軍のちくわのIDと数によって決まる．しかし，不正アクセスを行うと任意の数を送信することが可能である．
 
 \section{提案手法}
+この節では，仮想強盗の検出に関わる手法を述べる．
+
 \subsection{ログの取得}
+Djangoのビュー関数はHTTPリクエストオブジェクトを受け取り，リクエストからパラメータを取り出したあと，データベース処理などを行ってレスポンスを返す．
+しかし，最初のリクエストオブジェクト自体は破棄される．
+一方，Apache ServerにはCommon Log Format\cite{clf} (CLF) 形式でログを保存する機能が存在する．
+しかし，CLFでアクセス元を区別する方法はIPアドレスのみであり，アクセス元に付随するアプリケーション上の情報は取得できない．
+従って，この情報ではチートの検出に不十分である．
+
+本研究では，PythonのPickleモジュール\cite{pickle}を用い，リクエストオブジェクトを直接外部ファイルに保存する手法をとった．
+以後，保存されたリクエストオブジェクトを「ログ配列」，ログ配列が保存されている外部ファイルを「ログファイル」と呼ぶ．
+リクエストオブジェクトには以下の情報が含まれる．
+
+\begin{itemize}
+\item
+ユーザープロフィール．
+\begin{itemize}
+\item
+ユーザーID(Primary Key, PK)．会員登録時にサーバーが自動的に付与する．
+\item
+メールアドレス．
+\item
+表示名．
+\item
+最終ログイン日時．
+\item
+会員登録日時．
+\end{itemize}
+\item
+リクエストパラメタ．Pythonの辞書(Dictionary)形式．
+\end{itemize}
+
+\paragraph{ログ配列へのリクエストオブジェクトの追加}
+リクエストオブジェクトを外部ファイルに保存するためのメソッドを \savefunc として定義した．この定義は以下の通りである．
+
+\begin{pydef}
+\savefunc{\tt (request, filename)}
+
+予め保存されているログファイルを開き(これに失敗した場合は新規作成)，リクエストオブジェクトを付けたし，絵歌度ログファイルに保存する．
+
+\param
+\begin{itemize}
+\item
+{\tt request} 保存するリクエストオブジェクト．
+\item
+{\tt filename} ログファイルのファイル名．
+\end{itemize}
+
+\end{pydef}
+
+
+
+この外部ファイルは``unpickle''を適用することでPythonインスタンスとして扱うことができる．
+
+
+
 \subsection{ログから座標への変換}
+
 \subsection{仮想強盗の検出}
 
 \newpage
@@ -232,6 +306,12 @@ Django project. https://www.djangoproject.com
 
 \bibitem{python}
 Python programming language. http://www.python.org
+
+\bibitem{clf}
+Log format. Apache. http://httpd.apache.org/docs/2.4/mod/mod\_log\_config.html
+
+\bibitem{pickle}
+Pickle. Python. http://docs.python.jp/2/library/pickle.html
 
 \end{thebibliography}
 
