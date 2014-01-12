@@ -1,0 +1,137 @@
+\section{サーバーへのアクセスログの取得}
+本研究では，詐称チートを検出するために「ゲーム進行状態」と「成長パラメータ」を組み合わせた「成長過程座標」を用いる．
+そのために，必要な情報をサーバーへのHTTPアクセスから取得する必要がある．
+この節では，HTTPアクセスを蓄積し，そこから詐称チートの検出に必要な情報を取得する方法を述べる．
+
+\subsection{実装の必要性}
+Djangoのビュー関数はHTTPリクエストオブジェクトを受け取り，リクエストからパラメータを取り出したあと，データベース処理などを行ってレスポンスを返す．
+しかし，受け取ったリクエストオブジェクト自体は破棄される．
+一方，Apache ServerにはCommon Log Format\cite{clf} (CLF) 形式でログを保存する機能が存在する．
+しかし，CLFでアクセス元を区別する方法はIPアドレスのみであり，アクセス元に付随するアプリケーション上の情報は取得できない．
+従って，この情報ではチートの検出に不十分である．
+
+\subsection{リクエストオブジェクトとログ配列}
+本研究では，PythonのPickleモジュール\cite{pickle}を用い，リクエストオブジェクトを直接外部ファイルに保存する(Pickle化する)手法をとった．
+ただし，Pickleモジュールには制限があり，Pickle化できないオブジェクトが存在する．不幸なことに，実際のリクエストオブジェクトにはPickle化できないオブジェクトが含まれるため，そのままではPickleを適用できない．本研究では，成長過程座標に必要な情報を損なわない程度にリクエストオブジェクトから情報を抜き出し，この制限を回避している．
+
+以後，保存されたリクエストオブジェクトを「ログ配列」，ログ配列が保存されている外部ファイルを「ログファイル」と呼ぶ．
+リクエストオブジェクトには以下の情報が含まれる．
+
+\begin{itemize}
+\item
+ユーザープロフィール．
+\begin{itemize}
+\item
+ユーザーID(Primary Key, PK)．会員登録時にサーバーが自動的に付与する．
+\item
+メールアドレス．
+\item
+表示名．
+\item
+最終ログイン日時．
+\item
+会員登録日時．
+\end{itemize}
+\item
+リクエストパラメタ．Pythonの辞書(Dictionary)形式．
+\end{itemize}
+
+\subsection{ログ配列へのリクエストオブジェクトの追加}
+リクエストオブジェクトを外部ファイルに保存するためのメソッドを \savefunc として定義した．この定義は以下の通りである．
+
+\begin{pydef}
+\savefunc{\tt (request, filename)}
+
+予め保存されているログファイルを開き(これに失敗した場合は新規作成)，ログファイルからログ配列を生成し，ログ配列にリクエストオブジェクトを付け足し，ログファイルに保存する．
+
+\param
+\begin{itemize}
+\item
+{\tt request} 保存するリクエストオブジェクト．
+\item
+{\tt filename} ログファイルのファイル名．
+\end{itemize}
+
+\end{pydef}
+
+リクエストオブジェクトは，Djangoのビュー関数おいて必ず存在する．
+よってこの関数はDjangoアプリケーションであればモデルやビュー関数の設計に関わらず適用することができる．
+この外部ファイルは``unpickle''を適用することでPythonインスタンスとして扱うことができる．
+
+\paragraph{使用例}
+\savefunc はビュー関数中に挿入する形で用いる．以下に実際のコード例を示す．13行目に \savefunc を挿入し，リクエストオブジェクトをログファイルに追加する操作を行っている．
+
+\begin{lstlisting}
+def tikuwa_update(request):
+    '''Update the request.user's TikuwaBox to latest state.
+    Tikuwa Box is given as JSON text.'''
+
+    if request.method == 'POST':
+        try:
+            tid = request.POST['tid']
+            hasnum = request.POST['hasnum']
+        except KeyError:
+            return responses.bad_request(message='Field lacks')
+
+        # save logs and return JSON ACK
+        request_logging.save_to_outer(request, 'tikuwa_update')
+        return backends.tikuwa_sync(request.user, tid, hasnum)
+
+    else:
+        responses.bad_request(message='Not POST request')
+\end{lstlisting}
+
+\subsection{ログ配列から座標への変換}
+本研究では，ログ配列から詐称チートを検出するために空間的クラスタリングを用いる．
+そのために，リクエストオブジェクトから必要な情報を抜き出し，成長過程座標を作成する必要がある．
+以下がその関数である．
+
+\begin{pydef}
+{\tt make\_point(request, *keys)}
+単一のリクエストオブジェクトを成長過程座標に変換する．
+
+\param
+\begin{itemize}
+\item
+{\tt request} 変換対象のリクエストオブジェクト．
+\item
+{\tt keys} リクエストオブジェクトに含まれる，成長パラメータとして用いるパラメータのキーの名前．
+\end{itemize}
+
+\pyreturn
+リスト形式による成長過程座標．最初の項はゲーム歴，2項目以降は指定したパラメータである．
+
+\end{pydef}
+
+例を用いて説明する．以下のリクエストオブジェクトを成長過程配列に変換する．このオブジェクトを保存する変数を{\tt my\_request}とする．
+
+\begin{itemize}
+\item
+ユーザープロフィール
+\begin{itemize}
+\item
+会員登録日時: 2014年01月01日 00:00:00
+\item
+最終ログイン日時: 2014年01月02日 12:34:56
+\end{itemize}
+\item
+リクエストパラメータ
+\begin{itemize}
+\item
+{\tt "tid": 0}
+\item
+{\tt "num": 24}
+\end{itemize}
+\end{itemize}
+
+以下のコードは，対話的に{\tt my\_request}を成長過程座標に変換し，変数{\tt my\_point}に代入する方法を示す．
+
+\begin{lstlisting}
+>>> my_point = make_point(my_request, 'tid', 'num')
+>>> my_point
+[131696, 0, 24]
+\end{lstlisting}
+
+まず進行状態としてゲーム歴を取得する．
+ログ配列のユーザー情報には「会員登録日時」と「最終ログイン日時」が含まれるので，その差を取ればゲーム歴が取得できる．
+成長パラメータはPython辞書オブジェクトなので，キー名を文字列で指定することで取得できる．

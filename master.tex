@@ -1,0 +1,40 @@
+\documentclass[a4paper,12pt]{jsarticle}
+\title{Webアプリケーションにおける不正行為の\\統計的検出}
+\author{鈴木竜太}
+\date{\today}
+\input{./src/header.tex} % コマンド・パッケージ設定
+\begin{document}
+
+\maketitle % 表紙
+
+\newpage
+\tableofcontents % 目次
+
+\newpage
+\input{./src/introduction.tex} % 「はじめに」
+
+\newpage
+\part{方法}
+この章では，今回の実験の対象としたゲーム「ちくわ栽培キット」と，「ちくわ」におけるチートおよびそれの検出方法について述べる．
+
+\input{./src/tikuwa.tex} % 「ちくわ栽培キット」ルール説明
+\input{./src/cheat.tex} % 詐称チートと成長過程座標の説明
+\input{./src/logging.tex} % アクセスログから成長過程座標に変換するまで
+\input{./src/dbscan.tex} % DBSCANの説明 (引用)
+
+\newpage
+\part{実験}
+この章では，実際に「ちくわ栽培キット」を運用して行った提案手法の実証実験と，その結果について述べる．
+
+\input{./src/experiment.tex}
+
+\newpage
+\input{./src/ending.tex} % おわりに・謝辞
+
+\newpage
+\input{./src/references.tex}
+
+\newpage
+\part*{付録}
+
+\end{document}

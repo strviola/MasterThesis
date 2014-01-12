@@ -1,0 +1,168 @@
+\section{詐称チートの検出}
+この節では，成長過程座標の列から詐称チートを検出するために用いたクラスタリングアルゴリズムであるDBSCAN (Density Based Spacial Clustering of Application with Noise \cite{dbscan})について述べる．
+
+\subsection{DBSCANの概要}
+DBSCANは直感的に，ユークリッド空間上の近い(距離が短い)点を同一のクラスタと見なし，どのクラスタからも遠い(距離が長い)点をノイズと見なすことでクラスタリングを行うアルゴリズムである．従って，以下の2つのパラメータが重要である．
+
+\begin{itemize}
+\item
+実数$\Eps$．2点間の距離が$\Eps$以内であれば同一のクラスタと見なす．
+\item
+自然数$\MinPts$．クラスタに含まれる点の数が$\MinPts$未満であれば，そのクラスタはノイズと見なす．
+\end{itemize}
+
+\subsection{定義と準備}
+成長過程座標を$k$次元ユークリッド空間$D$上の点と見なし，個々の成長過程座標を$p,q \in D$とする．ここで$D$上には距離関数$d(p,q)$が定義できるものとする．
+
+\begin{mathdef}[$\Eps$近傍]
+点$p \in D$，距離$\Eps \in \R$に対して，点$p$の$\Eps$近傍$N_{\Eps}(p)$を以下の式で定義する．
+\[
+	N_\Eps(p) = \{q \in D \mid d(p,q) \leq \Eps\}
+\]
+\end{mathdef}
+
+\begin{mathdef}[直接到達可能性]
+点$p,q$が以下の条件を満たす時，$p$は$q$から$\Eps, \MinPts$に関して直接到達可能であると呼び，$p \dreach q$と表す．
+\begin{enumerate}
+\item
+$p \in N_\Eps(q)$
+\item
+$|N_\Eps(q)| \geq \MinPts$
+\end{enumerate}
+
+ただし，集合$S$に対して$S$の要素の個数を$|S|$と表す．
+\end{mathdef}
+
+\begin{mathdef}[到達可能性]
+以下の条件を満たす点列$p_1, \dots, p_n (n \in \N)$が存在する時，$p$は$q$から$\Eps, \MinPts$に関して到達可能であると呼び，$p \reach q$と表す．
+
+\begin{enumerate}
+\item
+$p_1 = p \cap p_n = q$
+\item
+$1 \leq i \leq n-1$を満たす全ての$i \in \N$について，$p_i \dreach p_{i+1}$である．
+\end{enumerate}
+\end{mathdef}
+
+到達可能性は一見対称な条件に見える．しかし点$p$の周辺に点が少ない時，直接到達可能性の第2条件$|N_\Eps(p)| \geq \MinPts$が満たされない場合が存在するため，対称ではない．
+この時，点$p$はクラスタの境界点であると呼ぶ．
+言い換えると，$p$が境界点である時，$p \reach q$であっても$q \reach p$であるとは限らない．
+
+境界点どうしの関係を述べるため，以下の性質を定義する．
+
+\begin{mathdef}[接続性]
+ある点$r$が存在して，$r \reach p$かつ$r \reach q$である時，$p$と$q$は$\Eps, \MinPts$に関して接続していると呼び，$p \conn q$と表す．
+\end{mathdef}
+
+これらの定義を用いて，クラスタおよびノイズを次の通り定義する．
+
+\begin{mathdef}[クラスタ]
+クラスタ$C$は以下の条件を満たす$D$の空でない部分集合である．
+
+\begin{enumerate}
+\item
+$\forall p, q$について，もし$p \in C$かつ$q \reach p$であれば$q \in C$である．
+\item
+$\forall p, q \in C$について，$p \conn q$である．
+\end{enumerate}
+\end{mathdef}
+
+\begin{mathdef}[ノイズ]
+$C_1, \dots, C_n (n \in \N)$を$D$のクラスタであるとする．この時，全ての$1 \leq i \leq k$について点$p$が$p \not \in C_i$である時，点$p$はノイズである．
+\end{mathdef}
+
+以下の補題は，次に述べるDBSCANアルゴリズムの正当性を示すために重要である．
+
+\begin{lemma}
+点$p$を$D$上の点とし，$|N_\Eps(p)| \geq \MinPts$であるとする．この時，集合$O = \{o \mid o \in D \cap o \reach p\}$はクラスタである．
+\end{lemma}
+
+\begin{lemma}
+$C$をクラスタとし，点$p$を$p \in C$かつ$|N_\Eps(p)| \geq \MinPts$である点とする．この時，$C$は集合$O = \{o \mid o \reach p\}$と等しい．
+\end{lemma}
+
+\subsection{DBSCANアルゴリズム}
+以上の定義を用いて，DBSCANアルゴリズムを以下の通り定義する．
+
+\paragraph{入力}
+\begin{itemize}
+\item
+$D$: 成長過程座標の列．
+\item
+$\Eps$: 実数．
+\item
+$\MinPts$: 自然数．
+\end{itemize}
+
+\paragraph{初期化}
+\begin{itemize}
+\item
+全ての$p \in D$について，$p\plabel = \notyet$
+\item
+$l = 0$
+\end{itemize}
+
+ここで，$p\plabel$は$p$が所属するクラスタを表すラベルであり，ノイズを$-1$で表す．初期状態では$p$は全て未分類(unclassified)である．$l$はその時点でのクラスタの数である．
+
+\paragraph{アルゴリズム}
+\begin{enumerate}
+
+\item \label{choose}
+$D$から点をひとつ選び$p$とする．$D \la D \setminus \{p\}$.
+
+\item
+集合$S$を$S \la N_\Eps(p)$とする．
+
+\item
+$|S| < \MinPts$であれば\ref{choose}に戻る．そうでなければ\ref{reach}に進む．
+
+\item \label{reach}
+$p\plabel \la l$.
+
+\item
+$S \la S \setminus \{p\}$.
+
+\item \label{seeds}
+$S$から点をひとつ選び$p_1$とする．
+
+\item
+集合$S_1$を$S_1 = N_\Eps(p_1)$とする．
+
+\item
+$|S_1| \geq \MinPts$であれば\ref{search}に進む．そうでなければ\ref{endsearch}に進む．
+
+\item \label{search}
+$S_1$から点をひとつ選び$p_2$とする．$S_1 \la S_1 \setminus \{p_2\}$.
+
+\item
+$p_2\plabel = \notyet$であれば$S \la S \cup \{p_2\}$.
+
+\item
+$p_2\plabel \la l$.
+
+\item
+$S_1 = \{\}$であれば\ref{endsearch}に進む．そうでなければ\ref{search}に戻る．
+
+\item \label{endsearch}
+$S \la S \setminus \{p_1\}$.
+
+\item
+$S = \{\}$であれば\ref{labelchange}に進む．そうでなければ\ref{seeds}に戻る．
+
+\item \label{labelchange}
+$l \la l + 1$.
+
+\item
+$D = \{\}$であれば終了．そうでなければ\ref{choose}に戻る．
+
+\end{enumerate}
+
+\subsection{詐称チート検出におけるDBSCAN}
+このアルゴリズムを採用した理由は，DBSCANのもつ以下の特徴による．
+
+\begin{itemize}
+\item
+クラスタ数を事前に指定する必要がない．ゲームの成長過程座標は，個人の遊び方により複数のクラスタを形成する(例えば，ヘビーユーザーとライトユーザー)ことが考えられるため，事前にクラスタ数を見積もることが難しい，この点でDBSCANは有利である．
+\item
+どのクラスタにも属さない座標をノイズとして検出できる．詐称チートは他の成長過程座標から距離的に離れている可能性が高いため，ノイズとして検出されることが期待できる．
+\end{itemize}

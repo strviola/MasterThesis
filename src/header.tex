@@ -1,0 +1,36 @@
+% packages
+\usepackage[dvipdfm]{graphicx}
+\usepackage{listings}
+\usepackage{ascmac}
+\usepackage{here}
+\usepackage{txfonts}
+\usepackage{amssymb}
+
+% listings(ソースコード表示スタイル)の設定
+\lstset{
+	language=Python,
+	basicstyle=\ttfamily,
+	commentstyle=\textit,
+	numbers=left,
+	showstringspaces=false,
+}
+
+% environment
+\newtheorem{pydef}{Method}
+\newtheorem{mathdef}{定義}
+\newtheorem{lemma}{補題}
+
+% definition
+\newcommand{\savefunc}{{\tt save\_to\_outer}}
+\newcommand{\param}{\paragraph{パラメータ}}
+\newcommand{\pyreturn}{\paragraph{返り値}}
+\newcommand{\Eps}{{\it Eps}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\MinPts}{{\it MinPts}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\reach}{\sim_{\Eps, \MinPts}}
+\newcommand{\dreach}{\reach'}
+\newcommand{\conn}{\simeq_{\Eps, \MinPts}}
+\newcommand{\plabel}{.{\rm label}}
+\newcommand{\la}{\leftarrow}
+\newcommand{\notyet}{{\rm UNCLASSIFIED}}
